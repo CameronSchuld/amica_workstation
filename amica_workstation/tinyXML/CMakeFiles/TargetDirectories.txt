@@ -1,0 +1,11 @@
+C:/lib/tinyXML/CMakeFiles/NightlyMemoryCheck.dir
+C:/lib/tinyXML/CMakeFiles/Experimental.dir
+C:/lib/tinyXML/CMakeFiles/Continuous.dir
+C:/lib/tinyXML/CMakeFiles/Nightly.dir
+C:/lib/tinyXML/CMakeFiles/xmltest.dir
+C:/lib/tinyXML/CMakeFiles/tinyxml2.dir
+C:/lib/tinyXML/CMakeFiles/uninstall.dir
+C:/lib/tinyXML/CMakeFiles/RUN_TESTS.dir
+C:/lib/tinyXML/CMakeFiles/INSTALL.dir
+C:/lib/tinyXML/CMakeFiles/ALL_BUILD.dir
+C:/lib/tinyXML/CMakeFiles/ZERO_CHECK.dir
