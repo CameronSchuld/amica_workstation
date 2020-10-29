@@ -31,8 +31,8 @@ bool pathExtraction(std::string&); //Extract directory path for memory storage
 bool setPath(std::string); //Set directory path for memory storage
 
 bool createXML(std::string, int);
-
-
+bool readXML(std::string, int&);
+bool readXML(std::string, std::string&);
 
 void videoMod(label*, std::string);
 void modApply(std::string, std::string);
@@ -162,10 +162,13 @@ int main()
 		{
 			frameCapture = false;
 
+			xmlFileName = videoSavePath + "\\video" + std::to_string(label.videoName) + "\\child.xml";
 			fileName = videoSavePath + "\\video" + std::to_string(label.videoName) + ".avi";
 			output.write(frame);
 			output.release();
-			
+
+			createXML(xmlFileName, 0);
+
 			for (int a = 0; a < 100; a++)
 			{
 				if (label.videoProcQueue[a] == 0)
@@ -188,6 +191,9 @@ int main()
 			if (frameCapture)
 			{
 				output.write(frame);
+				output.release();
+				xmlFileName = videoSavePath + "\\video" + std::to_string(label.videoName) + "\\child.xml";
+				createXML(xmlFileName, 0);
 				label.videoName++;
 			}
 			break;
@@ -204,13 +210,13 @@ int main()
 	return 0;
 }
 
-
 void videoMod(label* label, std::string memoryPath)
 {
 	std::string videoSavePath = memoryPath + "\\object_storage\\video";
 	std::string imageSavePath = memoryPath + "\\object_storage\\image";
 	std::string fileIn;
 	std::string fileOut;
+	std::string xmlPath;
 	cv::VideoCapture capture;
 	cv::Mat frame;
 
@@ -236,6 +242,8 @@ void videoMod(label* label, std::string memoryPath)
 				continue;
 			random = rand() % label->videoName;
 			fileIn = videoSavePath + "\\video" + std::to_string(random);
+			xmlPath = fileIn + "\\child.xml";
+			label->findXmlData(xmlPath, "CHILD", saveName);
 		}
 
 		//If there is something in the first place of the queue
@@ -243,7 +251,9 @@ void videoMod(label* label, std::string memoryPath)
 		else
 		{
 			fileIn = videoSavePath + "\\video" + std::to_string(label->videoProcQueue[0]);
-			
+			xmlPath = fileIn + "\\child.xml";
+			label->findXmlData(xmlPath, "CHILD", saveName);
+
 			for (int a = 1; a < 100; a++)
 			{
 				label->videoProcQueue[a - 1] = label->videoProcQueue[a];
@@ -253,9 +263,6 @@ void videoMod(label* label, std::string memoryPath)
 
 		int frameWidth = capture.get(cv::CAP_PROP_FRAME_WIDTH);
 		int frameHeight = capture.get(cv::CAP_PROP_FRAME_HEIGHT);
-
-		//NEED TO IMPLEMENT BEFORE IT CAN WORK
-		//Create an xml doc to monitor and keep track of sub-augmentations and their names
 
 		//String to save the file
 		fileOut = fileIn + "\\aug" + std::to_string(saveName);
@@ -270,7 +277,7 @@ void videoMod(label* label, std::string memoryPath)
 		//Or change it slightly to prevent bad agumentations from hindering finding connections
 		if (false)
 		{
-
+			
 		}
 
 		//Else create a new analyzing technique at random

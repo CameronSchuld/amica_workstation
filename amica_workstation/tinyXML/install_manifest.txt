@@ -1,8 +1,0 @@
-C:/lib/tinyXML/lib/tinyxml2.lib
-C:/lib/tinyXML/bin/tinyxml2.dll
-C:/lib/tinyXML/include/tinyxml2.h
-C:/lib/tinyXML/lib/pkgconfig/tinyxml2.pc
-C:/lib/tinyXML/lib/cmake/tinyxml2/tinyxml2Config.cmake
-C:/lib/tinyXML/lib/cmake/tinyxml2/tinyxml2ConfigVersion.cmake
-C:/lib/tinyXML/lib/cmake/tinyxml2/tinyxml2Targets.cmake
-C:/lib/tinyXML/lib/cmake/tinyxml2/tinyxml2Targets-release.cmake

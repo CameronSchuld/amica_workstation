@@ -1,4 +1,4 @@
-prefix=C:/lib/tinyXML
+prefix=C:\lib\tinyxml2_somethingElse
 exec_prefix=${prefix}
 libdir=${exec_prefix}/lib
 includedir=${prefix}/include

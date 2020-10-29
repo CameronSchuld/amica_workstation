@@ -155,6 +155,7 @@ bool label::findXmlData(std::string xmlPath, std::string elementName, int& value
 		return false;
 	}
 
+	std::cout << "Successfully extracted data from '" << xmlPath << "'.\n";
 	return true;
 }
 
