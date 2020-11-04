@@ -1,14 +1,15 @@
 #include "vision.h"
 
+//Call when next frame is available
+bool vision::nextFrame(cv::Mat newFrame)
+{
+	newFrame.copyTo(unalteredFrame);
+	newFrame.copyTo(alteredFrame);
 
-//vision::vision(cv::Mat frame)
-//{
-//	frame.copyTo(alteredFrame);
-//	frame.copyTo(unalteredFrame);
-//
-//	return;
-//}
+	return true;
+}
 
+//Not sure what this is used for tbh
 bool vision::recordFrame(cv::Mat& image)
 {
 	cv::Mat differenceFrame;
@@ -16,17 +17,22 @@ bool vision::recordFrame(cv::Mat& image)
 	return false;
 }
 
-bool vision::blurFrame(cv::Mat& image, int blurX, int blurY)
+//Blurs whatever mat image is in the class
+bool vision::blurFrame(int blurX, int blurY)
 {
 	std::cout << "Blur: (" << blurX << ", " << blurY << ")\n";
-	cv::blur(image, image, cv::Point(blurX, blurY));
+	cv::blur(alteredFrame, alteredFrame, cv::Point(blurX, blurY));
 
 	return false;
 }
 
-bool vision::subtractBackground(cv::Mat frame, int bg_sub_type, int bg_length, int bg_power, int bg_shadow)
+//Initializes background subtraction with parameters (should only be called once per video, not once per frame)
+bool vision::initBackgroundSeparation(int bg_sub_type, int bg_length, int bg_power, int bg_shadow)
 {
-	cv::Mat fgMask(unalteredFrame.size(), CV_8UC1, cv::Scalar(0, 0, 0));
+	std::cout << "Background Subtraction: (" << bg_sub_type << ", " << bg_length << ", "
+		<< bg_power << ", " << bg_shadow << ")\n";
+
+	cv::Mat fgMask(alteredFrame.size(), CV_8UC1, cv::Scalar(0, 0, 0));
 
 	int intArg1;
 	int intArg2;
@@ -45,9 +51,68 @@ bool vision::subtractBackground(cv::Mat frame, int bg_sub_type, int bg_length, i
 	if (bg_sub_type == ARG_MOG2)
 		pBackSub = cv::createBackgroundSubtractorMOG2(bg_length, bg_power, boolArg);
 
-	pBackSub->apply(frame, fgMask);
+	return true;
+}
 
-	fgMask.copyTo(alteredFrame);
+//Applies background subtraction on mat image
+bool vision::subtractBackground()
+{
+	pBackSub->apply(alteredFrame, fgMask);
 
+	return true;
+}
+
+//Creates threshold image
+bool vision::thresh(int thresh_value, int max_thresh_value)
+{
+	cv::threshold(fgMask, threshold, thresh_value, max_thresh_value, cv::THRESH_BINARY);
+	return true;
+}
+
+//Dilates image after thresholding
+bool vision::dilate()
+{
+	cv::dilate(threshold, threshold, structuringElement);
+	return true;
+}
+
+//Erodes image after thresholding
+bool vision::erode()
+{
+	cv::erode(threshold, threshold, structuringElement);
+	return true;
+}
+
+//Canny threshold image
+bool vision::canny(int threshold1, int threshold2)
+{
+	cv::Canny(threshold, canny_output, threshold1, threshold2);
+	return true;
+}
+
+//Contour Object
+bool vision::contourObject()
+{
+	cv::findContours(canny_output, contours, hierarchy, cv::RETR_LIST, cv::CHAIN_APPROX_NONE);
+	return true;
+}
+
+//Draws Contours to Mat Image
+bool vision::drawContours()
+{
+	drawing = cv::Mat::zeros(canny_output.size(), CV_8UC3);
+
+	for (size_t i = 0; i < contours.size(); i++)
+	{
+		cv::drawContours(drawing, contours, (int)i, red, 2, cv::LINE_8, hierarchy, 0);
+	}
+
+	return true;
+}
+
+//Subtracts foreground
+bool vision::subtractForeground()
+{
+	pBackSub->apply(unalteredFrame, bgMask);
 	return true;
 }

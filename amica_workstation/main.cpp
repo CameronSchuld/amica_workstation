@@ -30,12 +30,16 @@ bool createNewFilesystem(); //Gathers specified information on creating a new fi
 bool pathExtraction(std::string&); //Extract directory path for memory storage
 bool setPath(std::string); //Set directory path for memory storage
 
-bool createXML(std::string, int);
-bool readXML(std::string, int&);
-bool readXML(std::string, std::string&);
+bool createAugChildXML(std::string, int); //Creates xml file for keeping track of child augmentations
+bool readAugChildXML(std::string, std::string, int&); //Reads xml for child augmentation
+bool readAugChildXML(std::string, std::string, std::string&); //Same thing with string not int
+bool writeAugChildXML(std::string, std::string, int); //Writes to the child augmentation xml doc
+
+bool createAugListXML(std::string); //Creates the augmentation list to be filled with values
+bool importAugListXML(std::string); //Imports all data from augmentation list 
+bool addAugListXML(std::string, int); //Adds integer representation to augmentation list
 
 void videoMod(label*, std::string);
-void modApply(std::string, std::string);
 
 
 int main()
@@ -125,7 +129,7 @@ int main()
 		difference = cv::countNonZero(threshold);
 
 		//If meets arguments start a recording
-		if (difference >= 20000 && active)
+		if (difference >= 10000 && active)
 		{
 
 			fileName = videoSavePath + "\\video" + std::to_string(label.videoName) + ".avi";
@@ -167,7 +171,7 @@ int main()
 			output.write(frame);
 			output.release();
 
-			createXML(xmlFileName, 0);
+			createAugChildXML(xmlFileName, 0);
 
 			for (int a = 0; a < 100; a++)
 			{
@@ -193,7 +197,7 @@ int main()
 				output.write(frame);
 				output.release();
 				xmlFileName = videoSavePath + "\\video" + std::to_string(label.videoName) + "\\child.xml";
-				createXML(xmlFileName, 0);
+				createAugChildXML(xmlFileName, 0);
 				label.videoName++;
 			}
 			break;
@@ -217,21 +221,23 @@ void videoMod(label* label, std::string memoryPath)
 	std::string fileIn;
 	std::string fileOut;
 	std::string xmlPath;
-	cv::VideoCapture capture;
-	cv::Mat frame;
+	std::string videoIn;
+	std::string xmlSavePath;
 
 	int queueSize = 0;
 	int random = 0;
 	int randomSize = 0;
 	int saveName = 0;
+	int childName = 0;
 
 	srand(time(NULL));
 
-	//Should run as long as the program is running
+	//Runs untill a break
 	while (true)
 	{
-		//New declaraction every run in a new scope
+		//New declaraction every run in new scope
 		vision vision;
+		cv::Mat frame;
 
 		//If process queue has nothing in it's first value the queue contains nothing
 		//Random video is selected and augmented then processed to make sure
@@ -242,6 +248,7 @@ void videoMod(label* label, std::string memoryPath)
 				continue;
 			random = rand() % label->videoName;
 			fileIn = videoSavePath + "\\video" + std::to_string(random);
+			videoIn = fileIn + "\\video" + std::to_string(random);
 			xmlPath = fileIn + "\\child.xml";
 			label->findXmlData(xmlPath, "CHILD", saveName);
 		}
@@ -251,6 +258,7 @@ void videoMod(label* label, std::string memoryPath)
 		else
 		{
 			fileIn = videoSavePath + "\\video" + std::to_string(label->videoProcQueue[0]);
+			videoIn = fileIn + "\\video" + std::to_string(label->videoProcQueue[0]) + ".avi";
 			xmlPath = fileIn + "\\child.xml";
 			label->findXmlData(xmlPath, "CHILD", saveName);
 
@@ -261,20 +269,29 @@ void videoMod(label* label, std::string memoryPath)
 			}
 		}
 
+		cv::VideoCapture capture;
+		capture.open(videoIn);
+
+		if (!capture.isOpened())
+		{
+			continue;
+		}
+
 		int frameWidth = capture.get(cv::CAP_PROP_FRAME_WIDTH);
 		int frameHeight = capture.get(cv::CAP_PROP_FRAME_HEIGHT);
 
 		//String to save the file
-		fileOut = fileIn + "\\aug" + std::to_string(saveName);
+		fileOut = fileIn + "\\aug" + std::to_string(saveName) + ".avi";
 
 		//Output is initialized after video is selected and path is assigned
 		cv::VideoWriter output;
 		output.open(fileOut, cv::VideoWriter::fourcc('M', 'J', 'P', 'g'), 20, cv::Size(frameWidth, frameHeight));
 
+
 		//If the file information matches up with another or shows similarities with another
 		//Execute the same augmentation pattern to keep consistency
 		//Side note you should probably have it recalculate the augmentation
-		//Or change it slightly to prevent bad agumentations from hindering finding connections
+		//Or change it slightly to prevent bad agumentations from taking priority and hindering finding connections
 		if (false)
 		{
 			
@@ -283,37 +300,83 @@ void videoMod(label* label, std::string memoryPath)
 		//Else create a new analyzing technique at random
 		else
 		{
-			while (capture.read(frame))
-			{
-				for (int a = 0; a < 100; a++)
-				{
-					if (true)//blur
-					{
-						vision.blurFrame(frame);
-					}
-					if (true)//background sub
-					{
-						vision.subtractBackground(frame);
-					}
-					if (true)//dilate
-					{
-
-					}
-					if (true)//erode
-					{
-
-					}
-				}
-			}
+			
 		}
-		//video.open(fileIn);
-		
-	}
 
+		//Needs an operation in order to configure some of the used augmentations
+		//Augmentations like background subtraction need setup before use 
+		//And need parameters before use
+		vision.initBackgroundSeparation(ARG_KNN, 100, 100, ARG_SHADOW);
+		
+
+		while (true)
+		{
+			capture >> frame;
+
+			if (frame.empty())
+				break;
+
+			vision.nextFrame(frame);
+
+			if (true)//blur
+			{
+				vision.blurFrame(9, 9);
+			}
+			if (true)//background sub
+			{
+				vision.subtractBackground();
+			}
+			if (false)//foreground sub
+			{
+				vision.subtractForeground();
+			}
+			if (true)
+			{
+				vision.thresh();
+			}
+			if (true)//dilate
+			{
+				vision.dilate();
+			}
+			if (true)//erode
+			{
+				vision.erode();
+			}
+			if (true)//canny
+			{
+				vision.canny();
+			}
+			if (true)//contour
+			{
+				vision.contourObject();
+			}
+			if (true)//draw contour
+			{
+				vision.drawContours();
+			}
+
+
+			cv::imshow("Memory Analysis", vision.drawing);
+			output.write(vision.alteredFrame);
+
+			char c = (char)cv::waitKey(25);
+			if (c == 27)
+				break;
+		}
+		cv::destroyAllWindows();
+		capture.release();
+		output.release();
+
+		//Increases the number inside child.xml under CHILD node when augmentation is applied
+		readAugChildXML(xmlPath, "CHILD", childName);
+		childName++;
+		writeAugChildXML(xmlPath, "CHILD", childName);
+
+	}
 	return;
 }
 
-bool createXML(std::string filePath, int value)
+bool createAugChildXML(std::string filePath, int value)
 {
 	tinyxml2::XMLDocument xmlObjectFile;
 
@@ -338,12 +401,154 @@ bool createXML(std::string filePath, int value)
 	return true;
 }
 
-void modApply(std::string file, std::string algorithm)
+bool readAugChildXML(std::string xmlPath, std::string elementName, int& value)
 {
+	tinyxml2::XMLDocument xmlLoad;
+	tinyxml2::XMLNode* pRoot;
+	tinyxml2::XMLElement* pElement;
+	tinyxml2::XMLError eResult;
 
+	eResult = xmlLoad.LoadFile(xmlPath.c_str());
 
+	if (eResult != tinyxml2::XML_SUCCESS)
+	{
+		std::cout << "There was an error loading '" << xmlPath << "'\n\n";
+		return false;
+	}
 
-	return;
+	pRoot = xmlLoad.FirstChild();
+	if (pRoot == nullptr)
+	{
+		std::cout << "Could not find first child of '" << xmlPath << "'\n\n";
+		return false;
+	}
+
+	pElement = pRoot->FirstChildElement(elementName.c_str());
+	if (pElement == nullptr)
+	{
+		std::cout << "Could not find '" << elementName << "' in path '" << xmlPath << "'.\n\n";
+		return false;
+	}
+
+	eResult = pElement->QueryIntText(&value);
+	if (eResult != tinyxml2::XML_SUCCESS)
+	{
+		std::cout << "Could not extract '" << elementName << "' in path '" << xmlPath << "'.\n\n";
+		return false;
+	}
+
+	std::cout << "Successfully extracted data from '" << xmlPath << "'.\n";
+	return true;
+}
+
+bool writeAugChildXML(std::string xmlPath, std::string elementName, int value)
+{
+	tinyxml2::XMLDocument xmlLoad;
+	tinyxml2::XMLNode* pRoot;
+	tinyxml2::XMLElement* pElement;
+	tinyxml2::XMLError eResult;
+
+	eResult = xmlLoad.LoadFile(xmlPath.c_str());
+
+	if (eResult != tinyxml2::XML_SUCCESS)
+	{
+		std::cout << "There was an error loading '" << xmlPath << "'\n\n";
+		return false;
+	}
+
+	pRoot = xmlLoad.FirstChild();
+	if (pRoot == nullptr)
+	{
+		std::cout << "Could not find first child of '" << xmlPath << "'\n\n";
+		return false;
+	}
+
+	pRoot->DeleteChildren();
+
+	pElement = xmlLoad.NewElement("CHILD");
+	pElement->SetText(value);
+	pRoot->InsertEndChild(pElement);
+
+	eResult = xmlLoad.SaveFile(xmlPath.c_str());
+
+	if (eResult != tinyxml2::XML_SUCCESS)
+	{
+		std::cout << "Could not write to '", xmlPath, "'.\n\n";
+		return false;
+	}
+
+	std::cout << "Successfully extracted data from '" << xmlPath << "'.\n";
+	return true;
+}
+
+bool createAugListXML(std::string xmlPath)
+{
+	//Building xml document for object directory
+	tinyxml2::XMLDocument xmlObjectFile;
+
+	tinyxml2::XMLNode* rootObject = xmlObjectFile.NewElement("Root");
+	xmlObjectFile.InsertFirstChild(rootObject);
+
+	tinyxml2::XMLElement* elementObject = xmlObjectFile.NewElement("LENGTH");
+	elementObject->SetText(0);
+	rootObject->InsertEndChild(elementObject);
+
+	tinyxml2::XMLError eResult = xmlObjectFile.SaveFile(xmlPath.c_str());
+
+	if (eResult != tinyxml2::XML_SUCCESS)
+	{
+		std::cout << "Could not write augmentation list to '" << xmlPath << "'.\n\n";
+		return false;
+	}
+	else
+		std::cout << "XML written to '" << xmlPath << "'\n";
+
+	return true;
+}
+
+bool addAugListXML(std::string xmlPath, int value)
+{
+	tinyxml2::XMLDocument xmlLoad;
+	tinyxml2::XMLNode* pRoot;
+	tinyxml2::XMLElement* pElement;
+	tinyxml2::XMLError eResult;
+	int length;
+
+	eResult = xmlLoad.LoadFile(xmlPath.c_str());
+
+	if (eResult != tinyxml2::XML_SUCCESS)
+	{
+		std::cout << "There was an error loading '" << xmlPath << "'\n\n";
+		return false;
+	}
+
+	pRoot = xmlLoad.FirstChild();
+	if (pRoot == nullptr)
+	{
+		std::cout << "Could not find first child of '" << xmlPath << "'\n\n";
+		return false;
+	}
+
+	pElement = pRoot->FirstChildElement("LENGTH");
+	if (pElement == nullptr)
+	{
+		std::cout << "Could not find 'LENGTH' in path '" << xmlPath << "'.\n\n";
+		return false;
+	}
+
+	eResult = pElement->QueryIntText(&length);
+	if (eResult != tinyxml2::XML_SUCCESS)
+	{
+		std::cout << "Could not extract 'LENGTH' in path '" << xmlPath << "'.\n\n";
+		return false;
+	}
+
+	std::cout << "Successfully extracted data from '" << xmlPath << "'.\n";
+
+	pElement = xmlLoad.NewElement("AUG");
+	
+
+	return true;
 }
 
 bool dataIntegrityCheck(std::string& workingPath)
