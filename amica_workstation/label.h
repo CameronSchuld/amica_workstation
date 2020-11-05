@@ -17,6 +17,7 @@ public:
 
 	bool importAllSenses(std::string);
 
+	bool saveName(std::string, std::string, int);
 	bool saveNames(std::string memoryPath);
 
 	int videoName;

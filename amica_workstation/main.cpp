@@ -34,12 +34,17 @@ bool createAugChildXML(std::string, int); //Creates xml file for keeping track o
 bool readAugChildXML(std::string, std::string, int&); //Reads xml for child augmentation
 bool readAugChildXML(std::string, std::string, std::string&); //Same thing with string not int
 bool writeAugChildXML(std::string, std::string, int); //Writes to the child augmentation xml doc
+bool saveVideoData(std::string, std::string);
 
 bool createAugListXML(std::string); //Creates the augmentation list to be filled with values
 bool importAugListXML(std::string); //Imports all data from augmentation list 
-bool addAugListXML(std::string, int); //Adds integer representation to augmentation list
+bool addAugListXML(std::string, int, int, std::vector<int>); //Adds integer representation to augmentation list
+bool getLengthAugListXML(std::string);
 
 void videoMod(label*, std::string);
+
+bool randomAugList(std::vector<int>&);
+
 
 
 int main()
@@ -218,11 +223,13 @@ void videoMod(label* label, std::string memoryPath)
 {
 	std::string videoSavePath = memoryPath + "\\object_storage\\video";
 	std::string imageSavePath = memoryPath + "\\object_storage\\image";
+	std::string algorithmSavePath = memoryPath + "\\algorithm_storage\\video";
 	std::string fileIn;
 	std::string fileOut;
 	std::string xmlPath;
 	std::string videoIn;
 	std::string xmlSavePath;
+	std::string augXmlSavePath;
 
 	int queueSize = 0;
 	int random = 0;
@@ -238,6 +245,13 @@ void videoMod(label* label, std::string memoryPath)
 		//New declaraction every run in new scope
 		vision vision;
 		cv::Mat frame;
+		std::vector<int> augList;
+
+		int commands[100];
+		for (int a = 0; a < 100; a++)
+		{
+			commands[a] = a + 1;
+		}
 
 		//If process queue has nothing in it's first value the queue contains nothing
 		//Random video is selected and augmented then processed to make sure
@@ -248,7 +262,7 @@ void videoMod(label* label, std::string memoryPath)
 				continue;
 			random = rand() % label->videoName;
 			fileIn = videoSavePath + "\\video" + std::to_string(random);
-			videoIn = fileIn + "\\video" + std::to_string(random);
+			videoIn = fileIn + "\\video" + std::to_string(random) + ".avi";
 			xmlPath = fileIn + "\\child.xml";
 			label->findXmlData(xmlPath, "CHILD", saveName);
 		}
@@ -282,6 +296,7 @@ void videoMod(label* label, std::string memoryPath)
 
 		//String to save the file
 		fileOut = fileIn + "\\aug" + std::to_string(saveName) + ".avi";
+		augXmlSavePath = algorithmSavePath + "\\alg" + std::to_string(label->videoAlgorithmName) + ".xml";
 
 		//Output is initialized after video is selected and path is assigned
 		cv::VideoWriter output;
@@ -296,11 +311,12 @@ void videoMod(label* label, std::string memoryPath)
 		{
 			
 		}
-
 		//Else create a new analyzing technique at random
 		else
 		{
-			
+			randomAugList(augList);
+			addAugListXML(augXmlSavePath, augList.size(), label->videoName, augList);
+			label->videoAlgorithmName++;
 		}
 
 		//Needs an operation in order to configure some of the used augmentations
@@ -309,7 +325,7 @@ void videoMod(label* label, std::string memoryPath)
 		vision.initBackgroundSeparation(ARG_KNN, 100, 100, ARG_SHADOW);
 		
 
-		while (true)
+		while(true)
 		{
 			capture >> frame;
 
@@ -318,45 +334,53 @@ void videoMod(label* label, std::string memoryPath)
 
 			vision.nextFrame(frame);
 
-			if (true)//blur
+			for (int a = 0; a < augList.size(); a++)
 			{
-				vision.blurFrame(9, 9);
-			}
-			if (true)//background sub
-			{
-				vision.subtractBackground();
-			}
-			if (false)//foreground sub
-			{
-				vision.subtractForeground();
-			}
-			if (true)
-			{
-				vision.thresh();
-			}
-			if (true)//dilate
-			{
-				vision.dilate();
-			}
-			if (true)//erode
-			{
-				vision.erode();
-			}
-			if (true)//canny
-			{
-				vision.canny();
-			}
-			if (true)//contour
-			{
-				vision.contourObject();
-			}
-			if (true)//draw contour
-			{
-				vision.drawContours();
+				if (augList[a] == AUGMENTATION_BLUR)//blur
+				{
+					vision.blurFrame(9, 9);
+				}
+				if (augList[a] == AUGMENTATION_BACKGROUND_SUBTRACTION)//background sub
+				{
+					vision.subtractBackground();
+				}
+				if (augList[a] == AUGMENTATION_FOREGROUND_SUBTRACTION)//foreground sub
+				{
+					vision.subtractForeground();
+				}
+				if (augList[a] == AUGMENTATION_THRESHOLD)
+				{
+					vision.thresh();
+				}
+				if (augList[a] == AUGMENTATION_DRAW_THRESHOLD)
+				{
+					vision.drawThresh();
+				}
+				if (augList[a] == AUGMENTATION_DILATE)//dilate
+				{
+					vision.dilate();
+				}
+				if (augList[a] == AUGMENTATION_ERODE)//erode
+				{
+					vision.erode();
+				}
+				if (augList[a] == AUGMENTATION_CANNY)//canny
+				{
+					vision.canny();
+				}
+				if (augList[a] == AUGMENTATION_CONTOUR)//contour
+				{
+					vision.contourObject();
+				}
+				if (augList[a] == AUGMENTATION_DRAW_CONTOUR)//draw contour
+				{
+					vision.drawContours();
+				}
+				if (augList[a] == AUGMENTATION_QUIT)
+					break;
 			}
 
-
-			cv::imshow("Memory Analysis", vision.drawing);
+			cv::imshow("Memory Analysis", vision.alteredFrame);
 			output.write(vision.alteredFrame);
 
 			char c = (char)cv::waitKey(25);
@@ -368,12 +392,202 @@ void videoMod(label* label, std::string memoryPath)
 		output.release();
 
 		//Increases the number inside child.xml under CHILD node when augmentation is applied
-		readAugChildXML(xmlPath, "CHILD", childName);
-		childName++;
-		writeAugChildXML(xmlPath, "CHILD", childName);
-
+		saveName++;
+		writeAugChildXML(xmlPath, "CHILD", saveName);
 	}
 	return;
+}
+
+bool randomAugList(std::vector<int>& augList)
+{
+	int random;
+
+	int start[3];
+	start[0] = AUGMENTATION_BACKGROUND_SUBTRACTION;
+	start[1] = AUGMENTATION_BLUR;
+	start[2] = AUGMENTATION_QUIT;
+
+	int blur[3];
+	blur[0] = AUGMENTATION_BACKGROUND_SUBTRACTION;
+	blur[1] = AUGMENTATION_BLUR;
+	blur[2] = AUGMENTATION_QUIT;
+
+	int background_subtraction[1];
+	background_subtraction[0] = AUGMENTATION_THRESHOLD;
+
+	int foreground_subtraction[1];
+	foreground_subtraction[0] = AUGMENTATION_THRESHOLD;
+
+	int threshold[4];
+	threshold[0] = AUGMENTATION_DILATE;
+	threshold[1] = AUGMENTATION_ERODE;
+	threshold[2] = AUGMENTATION_CANNY;
+	threshold[3] = AUGMENTATION_DRAW_THRESHOLD;
+
+	int dilate[4];
+	dilate[0] = AUGMENTATION_DILATE;
+	dilate[1] = AUGMENTATION_ERODE;
+	dilate[2] = AUGMENTATION_CANNY;
+	dilate[3] = AUGMENTATION_DRAW_THRESHOLD;
+
+	int erode[4];
+	erode[0] = AUGMENTATION_DILATE;
+	erode[1] = AUGMENTATION_ERODE;
+	erode[2] = AUGMENTATION_CANNY;
+	erode[3] = AUGMENTATION_DRAW_THRESHOLD;
+
+	int draw_threshold[1];
+	draw_threshold[0] = AUGMENTATION_QUIT;
+
+	int canny[1];
+	canny[0] = AUGMENTATION_CONTOUR;
+
+	int contour[1];
+	contour[0] = AUGMENTATION_DRAW_CONTOUR;
+
+	int draw_contour[1];
+	draw_contour[0] = AUGMENTATION_QUIT;
+
+	srand(time(NULL));
+	random = rand() % 4;
+	augList.push_back(start[random]);
+
+	while (true)
+	{
+		std::cout << augList[augList.size() - 1] << std::endl;
+		if (augList[augList.size() - 1] == AUGMENTATION_BACKGROUND_SUBTRACTION)
+		{
+			random = rand() % sizeof(background_subtraction) / sizeof(background_subtraction[0]);
+			augList.push_back(background_subtraction[random]);
+		}
+		else if (augList[augList.size() - 1] == AUGMENTATION_FOREGROUND_SUBTRACTION)
+		{
+			random = rand() % sizeof(foreground_subtraction) / sizeof(foreground_subtraction[0]);
+			augList.push_back(foreground_subtraction[random]);
+		}
+		else if (augList[augList.size() - 1] == AUGMENTATION_BLUR)
+		{
+			random = rand() % sizeof(blur) / sizeof(blur[0]);
+			augList.push_back(blur[random]);
+		}
+		else if (augList[augList.size() - 1] == AUGMENTATION_THRESHOLD)
+		{
+			random = rand() % sizeof(threshold) / sizeof(threshold[0]);
+			augList.push_back(threshold[random]);
+		}
+		else if (augList[augList.size() - 1] == AUGMENTATION_DILATE)
+		{
+			random = rand() % sizeof(dilate) / sizeof(dilate[0]);
+			augList.push_back(dilate[random]);
+		}
+		else if (augList[augList.size() - 1] == AUGMENTATION_ERODE)
+		{
+			random = rand() % sizeof(erode) / sizeof(erode[0]);
+			augList.push_back(erode[random]);
+		}
+		else if (augList[augList.size() - 1] == AUGMENTATION_DRAW_THRESHOLD)
+		{
+			random = rand() % sizeof(draw_threshold) / sizeof(draw_threshold[0]);
+			augList.push_back(draw_threshold[random]);
+		}
+		else if (augList[augList.size() - 1] == AUGMENTATION_CANNY)
+		{
+			random = rand() % sizeof(canny) / sizeof(canny[0]);
+			augList.push_back(canny[random]);
+		}
+		else if (augList[augList.size() - 1] == AUGMENTATION_CONTOUR)
+		{
+			random = rand() % sizeof(contour) / sizeof(contour[0]);
+			augList.push_back(contour[random]);
+		}
+		else if (augList[augList.size() - 1] == AUGMENTATION_DRAW_CONTOUR)
+		{
+			random = rand() % sizeof(draw_contour) / sizeof(draw_contour[0]);
+			augList.push_back(draw_contour[random]);
+		}
+		else if (augList[augList.size() - 1] == AUGMENTATION_QUIT)
+		{
+			break;
+		}
+		else
+		{
+			std::cout << "There was an augmentation that you missed.\n";
+			return false;
+		}
+		std::cout << random << ", " << sizeof(start) / sizeof(start[0]);
+
+	}
+
+	return true;
+}
+
+bool saveVideoData(std::string videoPath, std::string xmlPath)
+{
+	cv::VideoCapture capture;
+	capture.open(videoPath);
+
+	cv::Mat frame;
+	cv::Mat hsvFrame;
+	cv::Mat threshold;
+
+	int frameCount = 0;
+	double frameDifference;
+	double averageDifference = 0;
+	double maxDifference = 0;
+	double minDifference = 0;
+	std::vector<double> diffFrameCount;
+
+	if (!capture.isOpened())
+	{
+		std::cout << "Video could not be opened at '" << videoPath << "'.\n\n";
+		return false;
+	}
+
+	cv::Ptr<cv::BackgroundSubtractor> pBackSub;
+	pBackSub = cv::createBackgroundSubtractorKNN(200, 300, true);
+
+	capture >> frame;
+	
+	minDifference = frame.cols * frame.rows;
+
+	while (true)
+	{
+		capture >> frame;
+
+		if (frame.empty())
+			break;
+
+		frameCount++;
+
+		cv::Mat fgMask(frame.size(), CV_8UC1, cv::Scalar(0, 0, 0));
+		pBackSub->apply(frame, fgMask);
+		cv::threshold(fgMask, threshold, 200, 255, cv::THRESH_BINARY);
+
+
+		//Calculates the difference in frames
+		frameDifference = cv::countNonZero(threshold);
+
+		diffFrameCount.push_back(frameDifference);
+
+		if (frameDifference < minDifference)
+			minDifference = frameDifference;
+
+		if (frameDifference > maxDifference)
+			maxDifference = frameDifference;
+
+
+		char c = (char)cv::waitKey(25);
+		if (c == 27)
+			break;
+	}
+
+	for (int a = 0; a < diffFrameCount.size(); a++)
+	{
+		averageDifference += diffFrameCount[a];
+	}
+	averageDifference = averageDifference / diffFrameCount.size();
+
+
 }
 
 bool createAugChildXML(std::string filePath, int value)
@@ -506,13 +720,55 @@ bool createAugListXML(std::string xmlPath)
 	return true;
 }
 
-bool addAugListXML(std::string xmlPath, int value)
+bool addAugListXML(std::string xmlPath, int length, int videoID, std::vector<int> command)
+{
+	tinyxml2::XMLDocument xmlDoc;
+	tinyxml2::XMLNode* nRoot;
+	tinyxml2::XMLElement* pElement;
+
+	std::string elementName = "";
+
+	nRoot = xmlDoc.NewElement("Root");
+	xmlDoc.InsertFirstChild(nRoot);
+
+	pElement = xmlDoc.NewElement("AUGMENTATIONS");
+	pElement->SetAttribute("length", length);
+	pElement->SetAttribute("videoID", videoID);
+	nRoot->InsertEndChild(pElement);
+
+	for (int a = 0; a < command.size(); a++)
+	{
+		elementName = "AUG" + std::to_string(a);
+		tinyxml2::XMLElement* pListElement = xmlDoc.NewElement(elementName.c_str());
+
+		if (a - 1 >= length)
+			pListElement->SetText("VOID");
+
+		else
+			pListElement->SetText(command[a]);
+
+		pElement->InsertEndChild(pListElement);
+	}
+
+	tinyxml2::XMLError eResult = xmlDoc.SaveFile(xmlPath.c_str());
+
+	if (eResult != tinyxml2::XML_SUCCESS)
+	{
+		std::cout << "Could not write augmentation list to '" << xmlPath << "'.\n\n";
+		return false;
+	}
+	else
+		std::cout << "XML written to '" << xmlPath << "'\n";
+
+	return true;
+}
+
+bool getLengthAugListXML(std::string xmlPath, int& length)
 {
 	tinyxml2::XMLDocument xmlLoad;
 	tinyxml2::XMLNode* pRoot;
 	tinyxml2::XMLElement* pElement;
 	tinyxml2::XMLError eResult;
-	int length;
 
 	eResult = xmlLoad.LoadFile(xmlPath.c_str());
 
@@ -544,9 +800,6 @@ bool addAugListXML(std::string xmlPath, int value)
 	}
 
 	std::cout << "Successfully extracted data from '" << xmlPath << "'.\n";
-
-	pElement = xmlLoad.NewElement("AUG");
-	
 
 	return true;
 }

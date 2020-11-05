@@ -19,6 +19,7 @@
 #define ARG_NOSHADOW 1006
 
 //Unique identifiers for all augmentation functionality
+#define AUGMENTATION_QUIT 3000
 #define AUGMENTATION_BACKGROUND_SUBTRACTION 3001
 #define AUGMENTATION_FOREGROUND_SUBTRACTION 3002
 #define AUGMENTATION_BLUR 3003
@@ -27,8 +28,11 @@
 #define AUGMENTATION_ERODE 3006
 #define AUGMENTATION_CANNY 3007
 #define AUGMENTATION_CONTOUR 3008
-#define AUGMENTATION_TRACK 3009
-#define AUGMENTATION_MASK 3010
+#define AUGMENTATION_DRAW_CONTOUR 3009
+#define AUGMENTATION_TRACK 3010
+#define AUGMENTATION_MASK 3011
+#define AUGMENTATION_DRAW_THRESHOLD 3012
+#define AUGMENTAITON_DRAW_SUBTRACTION 3013
 
 
 class vision
@@ -40,7 +44,6 @@ public:
 
 	//Setup Augment Functions
 	bool initBackgroundSeparation(int bg_sub_type = ARG_KNN, int bg_length = 200, int bg_power = 200, int bg_shadow = ARG_SHADOW);
-
 
 	//Augment Functions
 	bool subtractBackground();
@@ -64,7 +67,7 @@ public:
 
 	//Exporting
 	bool drawContours();
-	
+	bool drawThresh();
 
 
 	cv::Mat unalteredFrame;

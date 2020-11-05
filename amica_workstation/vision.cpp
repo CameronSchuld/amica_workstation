@@ -69,6 +69,13 @@ bool vision::thresh(int thresh_value, int max_thresh_value)
 	return true;
 }
 
+//Draws threshold image
+bool vision::drawThresh()
+{
+	cv::copyTo(unalteredFrame, alteredFrame, threshold);
+	return true;
+}
+
 //Dilates image after thresholding
 bool vision::dilate()
 {
@@ -104,7 +111,7 @@ bool vision::drawContours()
 
 	for (size_t i = 0; i < contours.size(); i++)
 	{
-		cv::drawContours(drawing, contours, (int)i, red, 2, cv::LINE_8, hierarchy, 0);
+		cv::drawContours(alteredFrame, contours, (int)i, red, 2, cv::LINE_8, hierarchy, 0);
 	}
 
 	return true;

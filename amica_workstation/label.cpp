@@ -202,6 +202,36 @@ bool label::findXmlData(std::string xmlPath, std::string elementName, std::strin
 	return true;
 }
 
+bool label::saveName(std::string xmlPath, std::string elementName, int newValue)
+{
+	tinyxml2::XMLDocument xmlFile;
+
+	tinyxml2::XMLNode* pRoot = xmlFile.NewElement("Root");
+	xmlFile.InsertFirstChild(pRoot);
+
+	tinyxml2::XMLElement* pElement = xmlFile.NewElement("AUDIO");
+	pElement->SetText(audioAlgorithmName);
+	pRoot->InsertEndChild(pElement);
+
+	pElement = xmlFile.NewElement("VIDEO");
+	pElement->SetText(videoAlgorithmName);
+	pRoot->InsertEndChild(pElement);
+
+	pElement = xmlFile.NewElement("IMAGE");
+	pElement->SetText(imageAlgorithmName);
+	pRoot->InsertEndChild(pElement);
+
+	tinyxml2::XMLError eResult = xmlFile.SaveFile(xmlPath.c_str());
+
+	if (eResult != tinyxml2::XML_SUCCESS)
+	{
+		std::cout << "Could not write directory to '" << xmlPath << "'.\n\n";
+		return false;
+	}
+
+	std::cout << "Successfully written to '" << xmlPath << "'.\n\n";
+	return true;
+}
 
 bool label::saveNames(std::string memoryPath)
 {
@@ -246,5 +276,6 @@ bool label::saveNames(std::string memoryPath)
 
 	std::cout << "Successfully written to xml.\n\n";
 
+	saveName(memoryPath + xmlAlgorithmPath, "VIDEO", videoAlgorithmName);
 	return true;
 }
